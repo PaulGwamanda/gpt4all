@@ -26,6 +26,7 @@ class Chat : public QObject
     Q_PROPERTY(QString modelLoadingError READ modelLoadingError NOTIFY modelLoadingErrorChanged)
     Q_PROPERTY(QString tokenSpeed READ tokenSpeed NOTIFY tokenSpeedChanged);
     Q_PROPERTY(QString device READ device NOTIFY deviceChanged);
+    Q_PROPERTY(QString fallbackReason READ fallbackReason NOTIFY fallbackReasonChanged);
     QML_ELEMENT
     QML_UNCREATABLE("Only creatable from c++!")
 
@@ -52,6 +53,8 @@ public:
         emit nameChanged();
     }
     ChatModel *chatModel() { return m_chatModel; }
+
+    bool isNewChat() const { return m_name == tr("New Chat") && !m_chatModel->count(); }
 
     Q_INVOKABLE void reset();
     Q_INVOKABLE void processSystemPrompt();
@@ -90,6 +93,7 @@ public:
 
     QString tokenSpeed() const { return m_tokenSpeed; }
     QString device() const { return m_device; }
+    QString fallbackReason() const { return m_fallbackReason; }
 
 public Q_SLOTS:
     void serverNewPromptResponsePair(const QString &prompt);
@@ -118,6 +122,7 @@ Q_SIGNALS:
     void collectionListChanged(const QList<QString> &collectionList);
     void tokenSpeedChanged();
     void deviceChanged();
+    void fallbackReasonChanged();
 
 private Q_SLOTS:
     void handleResponseChanged(const QString &response);
@@ -129,6 +134,7 @@ private Q_SLOTS:
     void handleModelLoadingError(const QString &error);
     void handleTokenSpeedChanged(const QString &tokenSpeed);
     void handleDeviceChanged(const QString &device);
+    void handleFallbackReasonChanged(const QString &device);
     void handleDatabaseResultsChanged(const QList<ResultInfo> &results);
     void handleModelInfoChanged(const ModelInfo &modelInfo);
     void handleModelInstalled();
@@ -142,6 +148,7 @@ private:
     QString m_modelLoadingError;
     QString m_tokenSpeed;
     QString m_device;
+    QString m_fallbackReason;
     QString m_response;
     QList<QString> m_collections;
     ChatModel *m_chatModel;

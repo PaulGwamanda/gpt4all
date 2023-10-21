@@ -35,8 +35,8 @@ MySettingsTab {
             Layout.fillWidth: false
             model: ["Dark", "Light"]
             Accessible.role: Accessible.ComboBox
-            Accessible.name: qsTr("ComboBox for displaying/picking the color theme")
-            Accessible.description: qsTr("Use this for picking the color theme for the chat client to use")
+            Accessible.name: qsTr("Color theme")
+            Accessible.description: qsTr("Color theme for the chat client to use")
             function updateModel() {
                 themeBox.currentIndex = themeBox.indexOfValue(MySettings.chatTheme);
             }
@@ -70,8 +70,8 @@ MySettingsTab {
             Layout.fillWidth: false
             model: ["Small", "Medium", "Large"]
             Accessible.role: Accessible.ComboBox
-            Accessible.name: qsTr("ComboBox for displaying/picking the font size")
-            Accessible.description: qsTr("Use this for picking the font size of the chat client")
+            Accessible.name: qsTr("Font size")
+            Accessible.description: qsTr("Font size of the chat client")
             function updateModel() {
                 fontBox.currentIndex = fontBox.indexOfValue(MySettings.fontSize);
             }
@@ -105,8 +105,8 @@ MySettingsTab {
             Layout.fillWidth: false
             model: MySettings.deviceList
             Accessible.role: Accessible.ComboBox
-            Accessible.name: qsTr("ComboBox for displaying/picking the device")
-            Accessible.description: qsTr("Use this for picking the device of the chat client")
+            Accessible.name: qsTr("Device")
+            Accessible.description: qsTr("Device of the chat client")
             function updateModel() {
                 deviceBox.currentIndex = deviceBox.indexOfValue(MySettings.device);
             }
@@ -143,8 +143,8 @@ MySettingsTab {
             Layout.fillWidth: true
             model: ModelList.userDefaultModelList
             Accessible.role: Accessible.ComboBox
-            Accessible.name: qsTr("ComboBox for displaying/picking the default model")
-            Accessible.description: qsTr("Use this for picking the default model to use; the first item is the current default model")
+            Accessible.name: qsTr("Default model")
+            Accessible.description: qsTr("Default model to use; the first item is the current default model")
             function updateModel() {
                 comboBox.currentIndex = comboBox.indexOfValue(MySettings.userDefaultModel);
             }
@@ -194,7 +194,7 @@ MySettingsTab {
             Layout.row: 5
             Layout.column: 2
             text: qsTr("Browse")
-            Accessible.description: qsTr("Opens a folder picker dialog to choose where to save model files")
+            Accessible.description: qsTr("Choose where to save model files")
             onClicked: {
                 openFolderDialog("file://" + MySettings.modelPath, function(selectedFolder) {
                     MySettings.modelPath = selectedFolder
@@ -234,53 +234,35 @@ MySettingsTab {
             Accessible.description: ToolTip.text
         }
         Label {
-            id: saveChatsLabel
-            text: qsTr("Save chats to disk:")
+            id: saveChatsContextLabel
+            text: qsTr("Save chats context to disk:")
             color: theme.textColor
             font.pixelSize: theme.fontSizeLarge
             Layout.row: 7
             Layout.column: 0
         }
         MyCheckBox {
-            id: saveChatsBox
+            id: saveChatsContextBox
             Layout.row: 7
             Layout.column: 1
-            checked: MySettings.saveChats
+            checked: MySettings.saveChatsContext
             onClicked: {
-                Network.sendSaveChatsToggled(saveChatsBox.checked);
-                MySettings.saveChats = !MySettings.saveChats
+                MySettings.saveChatsContext = !MySettings.saveChatsContext
             }
             ToolTip.text: qsTr("WARNING: Saving chats to disk can be ~2GB per chat")
             ToolTip.visible: hovered
-        }
-        Label {
-            id: saveChatGPTChatsLabel
-            text: qsTr("Save ChatGPT chats to disk:")
-            color: theme.textColor
-            font.pixelSize: theme.fontSizeLarge
-            Layout.row: 8
-            Layout.column: 0
-        }
-        MyCheckBox {
-            id: saveChatGPTChatsBox
-            Layout.row: 8
-            Layout.column: 1
-            checked: MySettings.saveChatGPTChats
-            onClicked: {
-                MySettings.saveChatGPTChats = !MySettings.saveChatGPTChats
-            }
         }
         Label {
             id: serverChatLabel
             text: qsTr("Enable API server:")
             color: theme.textColor
             font.pixelSize: theme.fontSizeLarge
-            Layout.row: 9
+            Layout.row: 8
             Layout.column: 0
         }
         MyCheckBox {
             id: serverChatBox
-            Layout.row: 9
+            Layout.row: 8
             Layout.column: 1
             checked: MySettings.serverChat
             onClicked: {
@@ -290,7 +272,7 @@ MySettingsTab {
             ToolTip.visible: hovered
         }
         Rectangle {
-            Layout.row: 10
+            Layout.row: 9
             Layout.column: 0
             Layout.columnSpan: 3
             Layout.fillWidth: true
