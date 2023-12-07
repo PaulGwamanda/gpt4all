@@ -21,12 +21,13 @@ class Chat : public QObject
     Q_PROPERTY(bool responseInProgress READ responseInProgress NOTIFY responseInProgressChanged)
     Q_PROPERTY(bool isRecalc READ isRecalc NOTIFY recalcChanged)
     Q_PROPERTY(bool isServer READ isServer NOTIFY isServerChanged)
-    Q_PROPERTY(QString responseState READ responseState NOTIFY responseStateChanged)
+    Q_PROPERTY(ResponseState responseState READ responseState NOTIFY responseStateChanged)
     Q_PROPERTY(QList<QString> collectionList READ collectionList NOTIFY collectionListChanged)
     Q_PROPERTY(QString modelLoadingError READ modelLoadingError NOTIFY modelLoadingErrorChanged)
     Q_PROPERTY(QString tokenSpeed READ tokenSpeed NOTIFY tokenSpeedChanged);
     Q_PROPERTY(QString device READ device NOTIFY deviceChanged);
     Q_PROPERTY(QString fallbackReason READ fallbackReason NOTIFY fallbackReasonChanged);
+    Q_PROPERTY(LocalDocsCollectionsModel *collectionModel READ collectionModel NOTIFY collectionModelChanged)
     QML_ELEMENT
     QML_UNCREATABLE("Only creatable from c++!")
 
@@ -68,7 +69,7 @@ public:
 
     QString response() const;
     bool responseInProgress() const { return m_responseInProgress; }
-    QString responseState() const;
+    ResponseState responseState() const;
     ModelInfo modelInfo() const;
     void setModelInfo(const ModelInfo &modelInfo);
     bool isRecalc() const;
@@ -83,6 +84,7 @@ public:
     bool isServer() const { return m_isServer; }
 
     QList<QString> collectionList() const;
+    LocalDocsCollectionsModel *collectionModel() const { return m_collectionModel; }
 
     Q_INVOKABLE bool hasCollection(const QString &collection) const;
     Q_INVOKABLE void addCollection(const QString &collection);
@@ -123,6 +125,7 @@ Q_SIGNALS:
     void tokenSpeedChanged();
     void deviceChanged();
     void fallbackReasonChanged();
+    void collectionModelChanged();
 
 private Q_SLOTS:
     void handleResponseChanged(const QString &response);
@@ -161,6 +164,7 @@ private:
     bool m_shouldDeleteLater;
     bool m_isModelLoaded;
     bool m_shouldLoadModelWhenInstalled;
+    LocalDocsCollectionsModel *m_collectionModel;
 };
 
 #endif // CHAT_H

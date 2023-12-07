@@ -227,7 +227,7 @@ bool ChatLLM::loadModel(const ModelInfo &modelInfo)
         if (!m_isServer)
             LLModelStore::globalInstance()->releaseModel(m_llModelInfo); // release back into the store
         m_llModelInfo = LLModelInfo();
-        emit modelLoadingError(QString("Previous attempt to load model resulted in crash for `%1` most likely due to insufficient memory. You should either remove this model or decrease your system RAM by closing other applications.").arg(modelInfo.filename()));
+        emit modelLoadingError(QString("Previous attempt to load model resulted in crash for `%1` most likely due to insufficient memory. You should either remove this model or decrease your system RAM usage by closing other applications.").arg(modelInfo.filename()));
     }
 
     if (fileInfo.exists()) {
@@ -378,6 +378,32 @@ bool ChatLLM::isModelLoaded() const
     return m_llModelInfo.model && m_llModelInfo.model->isModelLoaded();
 }
 
+std::string remove_leading_whitespace(const std::string& input) {
+    auto first_non_whitespace = std::find_if(input.begin(), input.end(), [](unsigned char c) {
+        return !std::isspace(c);
+    });
+
+    if (first_non_whitespace == input.end())
+        return std::string();
+
+    return std::string(first_non_whitespace, input.end());
+}
+
+std::string trim_whitespace(const std::string& input) {
+    auto first_non_whitespace = std::find_if(input.begin(), input.end(), [](unsigned char c) {
+        return !std::isspace(c);
+    });
+
+    if (first_non_whitespace == input.end())
+        return std::string();
+
+    auto last_non_whitespace = std::find_if(input.rbegin(), input.rend(), [](unsigned char c) {
+        return !std::isspace(c);
+    }).base();
+
+    return std::string(first_non_whitespace, last_non_whitespace);
+}
+
 void ChatLLM::regenerateResponse()
 {
     // ChatGPT uses a different semantic meaning for n_past than local models. For ChatGPT, the meaning
@@ -407,29 +433,6 @@ void ChatLLM::resetContext()
     regenerateResponse();
     m_processedSystemPrompt = false;
     m_ctx = LLModel::PromptContext();
-}
-
-std::string remove_leading_whitespace(const std::string& input) {
-    auto first_non_whitespace = std::find_if(input.begin(), input.end(), [](unsigned char c) {
-        return !std::isspace(c);
-    });
-
-    return std::string(first_non_whitespace, input.end());
-}
-
-std::string trim_whitespace(const std::string& input) {
-    auto first_non_whitespace = std::find_if(input.begin(), input.end(), [](unsigned char c) {
-        return !std::isspace(c);
-    });
-
-    if (first_non_whitespace == input.end())
-        return std::string();
-
-    auto last_non_whitespace = std::find_if(input.rbegin(), input.rend(), [](unsigned char c) {
-        return !std::isspace(c);
-    }).base();
-
-    return std::string(first_non_whitespace, last_non_whitespace);
 }
 
 QString ChatLLM::response() const
@@ -476,7 +479,7 @@ bool ChatLLM::handleResponse(int32_t token, const std::string &response)
     // check for error
     if (token < 0) {
         m_response.append(response);
-        emit responseChanged(QString::fromStdString(m_response));
+        emit responseChanged(QString::fromStdString(remove_leading_whitespace(m_response)));
         return false;
     }
 
@@ -486,7 +489,7 @@ bool ChatLLM::handleResponse(int32_t token, const std::string &response)
     m_timer->inc();
     Q_ASSERT(!response.empty());
     m_response.append(response);
-    emit responseChanged(QString::fromStdString(m_response));
+    emit responseChanged(QString::fromStdString(remove_leading_whitespace(m_response)));
     return !m_stopGenerating;
 }
 
@@ -503,6 +506,11 @@ bool ChatLLM::handleRecalculate(bool isRecalc)
 }
 bool ChatLLM::prompt(const QList<QString> &collectionList, const QString &prompt)
 {
+    if (m_restoreStateFromText) {
+        Q_ASSERT(m_state.isEmpty());
+        processRestoreStateFromText();
+    }
+
     if (!m_processedSystemPrompt)
         processSystemPrompt();
     const QString promptTemplate = MySettings::globalInstance()->modelPromptTemplate(m_modelInfo);
@@ -526,8 +534,10 @@ bool ChatLLM::promptInternal(const QList<QString> &collectionList, const QString
 
     QList<ResultInfo> databaseResults;
     const int retrievalSize = MySettings::globalInstance()->localDocsRetrievalSize();
-    emit requestRetrieveFromDB(collectionList, prompt, retrievalSize, &databaseResults); // blocks
-    emit databaseResultsChanged(databaseResults);
+    if (!collectionList.isEmpty()) {
+        emit requestRetrieveFromDB(collectionList, prompt, retrievalSize, &databaseResults); // blocks
+        emit databaseResultsChanged(databaseResults);
+    }
 
     // Augment the prompt template with the results if any
     QList<QString> augmentedTemplate;
@@ -906,19 +916,14 @@ void ChatLLM::restoreState()
         return;
     }
 
-    if (m_restoreStateFromText) {
-        Q_ASSERT(m_state.isEmpty());
-        processRestoreStateFromText();
-    }
-
 #if defined(DEBUG)
     qDebug() << "restoreState" << m_llmThread.objectName() << "size:" << m_state.size();
 #endif
-    m_processedSystemPrompt = true;
 
     if (m_state.isEmpty())
         return;
 
+    m_processedSystemPrompt = true;
     m_llModelInfo.model->restoreState(static_cast<const uint8_t*>(reinterpret_cast<void*>(m_state.data())));
     m_state.clear();
     m_state.resize(0);
@@ -927,7 +932,7 @@ void ChatLLM::restoreState()
 void ChatLLM::processSystemPrompt()
 {
     Q_ASSERT(isModelLoaded());
-    if (!isModelLoaded() || m_processedSystemPrompt || m_isServer)
+    if (!isModelLoaded() || m_processedSystemPrompt || m_restoreStateFromText || m_isServer)
         return;
 
     const std::string systemPrompt = MySettings::globalInstance()->modelSystemPrompt(m_modelInfo).toStdString();
@@ -971,7 +976,7 @@ void ChatLLM::processSystemPrompt()
     fflush(stdout);
 #endif
 
-    m_processedSystemPrompt = !m_stopGenerating;
+    m_processedSystemPrompt = m_stopGenerating == false;
 }
 
 void ChatLLM::processRestoreStateFromText()

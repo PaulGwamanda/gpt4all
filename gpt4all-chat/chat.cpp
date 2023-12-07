@@ -18,6 +18,7 @@ Chat::Chat(QObject *parent)
     , m_shouldDeleteLater(false)
     , m_isModelLoaded(false)
     , m_shouldLoadModelWhenInstalled(false)
+    , m_collectionModel(new LocalDocsCollectionsModel(this))
 {
     connectLLM();
 }
@@ -35,6 +36,7 @@ Chat::Chat(bool isServer, QObject *parent)
     , m_shouldDeleteLater(false)
     , m_isModelLoaded(false)
     , m_shouldLoadModelWhenInstalled(false)
+    , m_collectionModel(new LocalDocsCollectionsModel(this))
 {
     connectLLM();
 }
@@ -71,6 +73,7 @@ void Chat::connectLLM()
     connect(this, &Chat::resetContextRequested, m_llmodel, &ChatLLM::resetContext, Qt::QueuedConnection);
     connect(this, &Chat::processSystemPromptRequested, m_llmodel, &ChatLLM::processSystemPrompt, Qt::QueuedConnection);
 
+    connect(this, &Chat::collectionListChanged, m_collectionModel, &LocalDocsCollectionsModel::setCollections);
     connect(ModelList::globalInstance()->installedModels(), &InstalledModels::countChanged,
         this, &Chat::handleModelInstalled, Qt::QueuedConnection);
 }
@@ -142,17 +145,9 @@ QString Chat::response() const
     return m_response;
 }
 
-QString Chat::responseState() const
+Chat::ResponseState Chat::responseState() const
 {
-    switch (m_responseState) {
-    case ResponseStopped: return QStringLiteral("response stopped");
-    case LocalDocsRetrieval: return QStringLiteral("retrieving ") + m_collections.join(", ");
-    case LocalDocsProcessing: return QStringLiteral("processing ") + m_collections.join(", ");
-    case PromptProcessing: return QStringLiteral("processing");
-    case ResponseGeneration: return QStringLiteral("generating response");
-    };
-    Q_UNREACHABLE();
-    return QString();
+    return m_responseState;
 }
 
 void Chat::handleResponseChanged(const QString &response)
@@ -403,6 +398,7 @@ bool Chat::deserialize(QDataStream &stream, int version)
     emit idChanged(m_id);
     stream >> m_name;
     stream >> m_userName;
+    m_generatedName = QLatin1String("nonempty");
     emit nameChanged();
 
     QString modelId;
